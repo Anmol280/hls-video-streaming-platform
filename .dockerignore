@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+**/.next-*
+**/coverage
+**/logs
+**/storage
+**/uploads
+**/transcoding-temp
+work/
+*.tsbuildinfo
+.git
+.env
+.env.*
+*.log
+npm-debug.log*

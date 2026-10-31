@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hls-secrets
+type: Opaque
+stringData:
+  database-url: "postgresql://postgres:password@postgres-service:5432/hls_platform"
+  jwt-secret: "your-super-secret-jwt-key-change-this-in-production"
+  aws-access-key-id: "your-aws-access-key-id"
+  aws-secret-access-key: "your-aws-secret-access-key"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hls-config
+data:
+  NODE_ENV: "production"
+  AWS_REGION: "us-east-1"
+  S3_BUCKET: "hls-video-storage"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  MAX_FILE_SIZE: "2147483648"
+  ALLOWED_VIDEO_TYPES: "mp4,avi,mov,mkv,wmv"
+  TRANSCODING_QUEUE_CONCURRENCY: "5"
+  MAX_RETRY_ATTEMPTS: "3"

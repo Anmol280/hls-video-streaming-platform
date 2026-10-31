@@ -1,0 +1,149 @@
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: hls-postgres
+    environment:
+      POSTGRES_DB: hls_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations/001_core_schema.sql:/docker-entrypoint-initdb.d/001_core_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: hls-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  user-management:
+    build:
+      context: .
+      dockerfile: services/user-management/Dockerfile
+    container_name: hls-user-management
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/hls_platform
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-local-dev-secret-change-this-before-deploy}
+      - NODE_ENV=development
+      - CORS_ORIGIN=http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/user-management:/app/services/user-management
+      - ./shared:/app/shared:ro
+      - /app/node_modules
+
+  video-upload:
+    build: ./services/video-upload
+    container_name: hls-video-upload
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/hls_platform
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-this-before-deploy}
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:3000
+      STORAGE_DRIVER: local
+      STORAGE_ROOT: /app/storage
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-524288000}
+      MAX_BULK_FILES: ${MAX_BULK_FILES:-2}
+      MAX_THUMBNAIL_SIZE: ${MAX_THUMBNAIL_SIZE:-5242880}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - hls_storage:/app/storage
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  transcoding-worker:
+    build: ./workers/transcoding-worker
+    container_name: hls-transcoding-worker
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/hls_platform
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: development
+      STORAGE_DRIVER: local
+      STORAGE_ROOT: /app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - hls_storage:/app/storage
+
+  video-streaming:
+    build: ./services/video-streaming
+    container_name: hls-video-streaming
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/hls_platform
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-this-before-deploy}
+      NODE_ENV: development
+      ALLOWED_ORIGINS: http://localhost:3000
+      STORAGE_DRIVER: local
+      STORAGE_ROOT: /app/storage
+      STREAM_RATE_LIMIT: ${STREAM_RATE_LIMIT:-3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - hls_storage:/app/storage
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3005/health/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        NEXT_PUBLIC_STREAMING_URL: ${NEXT_PUBLIC_STREAMING_URL:-http://localhost:3005}
+    container_name: hls-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      user-management:
+        condition: service_started
+      video-streaming:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  hls_storage:

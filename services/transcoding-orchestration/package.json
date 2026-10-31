@@ -1,0 +1,56 @@
+{
+  "name": "transcoding-orchestration-service",
+  "version": "1.0.0",
+  "description": "HLS Platform Transcoding Orchestration Service",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "worker": "node src/workers/transcodingWorker.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "pg": "^8.11.3",
+    "redis": "^4.6.10",
+    "jsonwebtoken": "^9.0.2",
+    "axios": "^1.6.2",
+    "winston": "^3.11.0",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1",
+    "bull": "^4.12.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "ffprobe-static": "^3.1.0",
+    "ffmpeg-static": "^5.2.0",
+    "aws-sdk": "^2.1498.0",
+    "sharp": "^0.33.0",
+    "file-type": "^18.7.0",
+    "moment": "^2.29.4",
+    "lodash": "^4.17.21",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.55.0"
+  },
+  "keywords": [
+    "video",
+    "transcoding",
+    "hls",
+    "ffmpeg",
+    "streaming",
+    "orchestration"
+  ],
+  "author": "HLS Platform Team",
+  "license": "MIT"
+}

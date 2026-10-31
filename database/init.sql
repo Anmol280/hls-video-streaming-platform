@@ -1,0 +1,4 @@
+-- Deprecated compatibility placeholder.
+-- Fresh PostgreSQL containers load database/migrations/001_core_schema.sql.
+-- Existing databases should be upgraded with: npm run db:migrate
+-- Keep database creation in POSTGRES_DB; do not add CREATE DATABASE or psql \c here.
